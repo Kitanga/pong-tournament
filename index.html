@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Ping Pong</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="main.css" rel="stylesheet">
+</head>
+
+<body>
+    <!-- <div id="win-score"></div> -->
+    <div id="pause-container" hidden="true">
+        <div id="count-down" hidden="true"></div>
+        <div id="pause-menu" hidden="true">
+            <p style="height:10%">Game is paused</p>
+            <p style="height:80%">
+                <div class="resume div-btn">Resume</div>
+                <div class="reset div-btn">Restart</div>
+                <div class="div-btn">Back to Main Menu</div>
+                <div class="div-btn">Exit Game</div>
+            </p>
+        </div>
+        <div id="win-message" hidden="true">
+            <p id="winner" style="height:10%"></p>
+            <div style="height:80%">
+                <div class="reset div-btn">Restart</div>
+                <div class="div-btn">Back to Main Menu</div>
+                <div class="div-btn">Exit Game</div>
+            </div>
+        </div>
+    </div>
+    <button type="button" id="pause" class="btn">Pause</button>
+    <!-- <button type="button" id="resume" class="btn">Resume</button> -->
+    <button type="button" id="mute" class="btn">Mute/Unmute</button>
+    <div id="game">
+        <div id="main-menu" hidden>
+            <p>Main Menu</p>
+            <p>
+                <div>Mode:</div>
+                <div>Classic</div>
+            </p>
+            <p>
+                <div>Theme:</div>
+                <div>Classic</div>
+            </p>
+            <p id="start">Start Game</p>
+            <p id="show-advanced">Show Advanced</p>
+            <p id="advanced-settings" hidden="true">
+                <p>
+                    <div>Win at:</div>
+                    <div>
+                        <input type="number" id="win-limit">
+                    </div>
+                </p>
+                <p hidden="true">
+                    <div>Paddle Colors:</div>
+                    <div>Classic</div>
+                </p>
+            </p>
+        </div>
+    </div>
+    <script src="../src/fpsmeter.min.js"></script>
+    <script src="../src/util.js"></script>
+    <script src="main.js"></script>
+</body>
+
+</html>
