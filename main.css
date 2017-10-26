@@ -7,7 +7,7 @@ body,
 html,
 
 /* #game, */
-
+/* #game canvas, */
 #display,
 #background {
     width: 100%;
@@ -19,6 +19,8 @@ body {
     background-color: #0d131c;
 }
 
+#playersList,
+#readying,
 #game canvas {
     image-rendering: -moz-crisp-edges;
     image-rendering: -webkit-crisp-edges;
@@ -45,10 +47,11 @@ body {
 
 #game {
     position: relative;
-    /* width: 40%; */
-    /* height: 100%; */
+    width: 52%;
+    height: 100%;
     margin-left: auto;
     margin-right: auto;
+    background-color: #04152f;
 }
 
 #score {
@@ -184,4 +187,67 @@ body {
 #main-menu {
     position: absolute;
     z-index: 10000;
+}
+
+/* Tournament code */
+
+
+#playersList {
+    color: #7fa5dd;
+    padding: 7%;
+    width: 92%;
+    height: 92%;
+    font-family: 'Aldrich', sans-serif;
+    /* background-color: #000000; */
+}
+
+#buttons {
+    padding-right: 2.8%;
+    padding-left: 1.4%;
+}
+
+.listPanels {
+    width: 50%;
+    height: 100%;
+    float: left;
+    overflow-y: auto;
+    border-top: 1px solid #7fa5dd;
+}
+
+.actionInline {
+    margin-bottom: 7px;
+    -webkit-appearance: none;
+    border: 1px solid #7fa5dd;
+    background-color: #082f67;
+    color: #7fa5dd;
+}
+
+#removeContenderBtn {
+    margin-right: 7px;
+}
+#startTournamentBtn,
+#removeContenderBtn {
+    float: right;
+}
+#availablePlayersBtn {
+    /* clear: left; */
+    width: 48.6%;
+    border-right: 1px solid #7fa5dd;
+}
+
+#contendersList {
+    width: 48.6%;
+    padding-left: 1.4%;
+}
+
+#picPreview {
+    width: 100%;
+    height: 90%;
+}
+
+#takePhoto {
+    display: block;
+    width: 17%;
+    margin-left: auto;
+    margin-right: auto;
 }

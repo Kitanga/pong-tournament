@@ -30,9 +30,9 @@
             </div>
         </div>
     </div>
-    <button type="button" id="pause" class="btn">Pause</button>
+    <!-- <button type="button" id="pause" class="btn">Pause</button> -->
     <!-- <button type="button" id="resume" class="btn">Resume</button> -->
-    <button type="button" id="mute" class="btn">Mute/Unmute</button>
+    <!-- <button type="button" id="mute" class="btn">Mute/Unmute</button> -->
     <div id="game">
         <div id="main-menu" hidden>
             <p>Main Menu</p>
@@ -58,6 +58,34 @@
                     <div>Classic</div>
                 </p>
             </p>
+        </div>
+        <!-- Tournament related markup -->
+        <div id=readying hidden>
+            <p>Player 1 VS Player 2</p>
+            <div>
+                <button type="button" class="readyBtn">Press W</button>
+                <button type="button" class="readyBtn">Press UP ARROW</button>
+            </div>
+        </div>
+        <div id=playersList>
+            <div id="buttons">
+                <button class="actionInline" id=createPlayerBtn type="button">Create Player</button>
+                <button class="actionInline" id=addContenderBtn type="button">Add Contender From List</button>
+                <button class="actionInline" id=startTournamentBtn type="button">Start!</button>
+                <button class="actionInline" id=removeContenderBtn type="button">Remove Contender</button>
+            </div>
+            <div id=availablePlayers class="listPanels">
+                <h3>Available Players</h3>
+            </div>
+            <div id=contendersList class="listPanels">
+                <h3>Contenders (<span id=contenderCount>0</span>/8)</h3>
+            </div>
+        </div>
+        <div id=preview hidden>
+            <video id=picPreview></video>
+            <!-- <div> -->
+            <button id=takePhoto type="button" class="take-pic-btn actionInline">Take picture</button>
+            <!-- </div> -->
         </div>
     </div>
     <script src="../src/fpsmeter.min.js"></script>

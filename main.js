@@ -1,10 +1,13 @@
 window.onload = function() {
     /* =========================Globals======================= */
 
-    window.stage = [];
-    window.totalSprites = 0;
+    // window.stage = [];
+    // window.totalSprites = 0;
     var gameContainer = document.getElementById('game'),
+        stage = [],
+        totalSprites = 0,
         raf = 0,
+        readyCount = 0,
         /* Information to be debugged is shown here */
         debug = [],
         /* The next variables are used to avoid garbage collection */
@@ -42,16 +45,22 @@ window.onload = function() {
                 this.p1_counter.innerHTML = (this.p1 + '').length === 1 ? '0' + (this.p1) : this.p1;
                 !firstRun ? snd.score.play() : '';
                 if (this.p1 == this.winScore) {
-                    showWinMessage("Player 1 Wins!!");
-                    this.reset();
+                    // showWinMessage("Player 1 Wins!!");
+                    // this.reset();
+                    stop();
+                    player1winner = true;
+                    finishMatch();
                 }
             },
             "renderP2": function() {
                 this.p2_counter.innerHTML = (this.p2 + '').length === 1 ? '0' + (this.p2) : this.p2;
                 !firstRun ? snd.score.play() : '';
                 if (this.p2 == this.winScore) {
-                    showWinMessage("Player 2 Wins!!");
-                    this.reset();
+                    // showWinMessage("Player 2 Wins!!");
+                    // this.reset();
+                    stop();
+                    player1winner = false;
+                    finishMatch();
                 }
             }
         },
@@ -61,6 +70,7 @@ window.onload = function() {
         p1 = {},
         p2 = {},
         isPaused = false,
+        matchHasStarted = false,
         baseCountDown = 3,
         countDown = baseCountDown,
         countDownDiv = document.getElementById('count-down'),
@@ -70,7 +80,17 @@ window.onload = function() {
         /* Game images */
         images = {},
         /* Audio */
-        snd = {},
+        snd = {
+            "stop": function() {
+                for (var i in this) {
+                    console.log(this[i]);
+                    if (this[i].pause) {
+                        this[i].pause();
+                        this[i].currentTime = 0;
+                    }
+                }
+            }
+        },
         sfx = {},
         music = {},
         /* Game dimension stuffs */
@@ -306,7 +326,7 @@ window.onload = function() {
                 /* isBase ? ( */
                 this.original_velocity = need.point(x, y) /* ) : '' */ ;
             },
-            "reset": function(/* callback */) {
+            "reset": function( /* callback */ ) {
                 this.pos.x = this.original_pos.x;
                 this.pos.y = this.original_pos.y;
                 this.velocity.x = this.original_velocity.x;
@@ -401,7 +421,6 @@ window.onload = function() {
     }
 
     function resize() {
-        /* TODO: Change the code for the sprites' resize function so that it 'find' the new position of the sprite in the now scaled canvas */
         var w = window.innerWidth,
             h = window.innerHeight;
         width = Math.round(window.innerHeight + (window.innerHeight * 0.5));
@@ -520,6 +539,16 @@ window.onload = function() {
 
     function onKey(_eve, code, pressed) {
         // console.log(code);
+        if (matchHasStarted) {
+            if (getKey("p") === code) {
+                showPauseMenu();
+            }
+
+            if (getKey("m") === code) {
+                toggleSfxMute();
+            }
+        }
+
         /* Start by looping through the gameObjects on the stage */
         for (var i = 0; i < totalSprites; i++) {
             if (stage[i].isInputEnabled) {
@@ -547,7 +576,7 @@ window.onload = function() {
     }
 
     function accellerate(speedVar, accVar, dt) {
-        speedVar += accVar/*  * dt */;
+        speedVar += accVar /*  * dt */ ;
         console.log(speedVar);
     }
 
@@ -655,11 +684,666 @@ window.onload = function() {
         winner.hidden ? (winner.hidden = false) : '';
     }
 
+    /* Tournament Code */
+    var pinLength = 0,
+        contenders = [],
+        shuffledContenders = [],
+        tournament = [
+            new Array(1),
+            new Array(2),
+            new Array(4),
+            new Array(8)
+        ],
+        matches = [],
+        players = JSON.parse(localStorage.getItem('players')) || {},
+        playerIDs = 0,
+        playerImages = {},
+        currentMatch = {},
+        t_canvas = need.canvas({
+            "id": "tournament-stuff" /* , */
+                // "width": width,
+                // "height": height
+        }),
+        t_context = t_canvas.getContext('2d');
+
+    // window.t = tournament;
+
+    function prepTournament() {
+        for (var i = 0, len = tournament.length; i < len; i++) {
+            var id = 0;
+            // if (tournament[i].hasOwnProperty('length')) {
+            for (var k = 0, len2 = tournament[i].length; k < len2; k++) {
+                if (i === len - 1) {
+                    /* The first stage (aka quarter-finals) */
+                    tournament[i][k] = pin({
+                        "drawDownLane": false,
+                        "p_id": players[contenders[k]] ? players[contenders[k]].id : 1,
+                        "drawFace": true
+                    });
+                } else if (i) {
+                    /* The normal stages */
+                    tournament[i][k] = pin({
+                        "active": false,
+                        "isMatch": true,
+                        "drawFace": false
+                    });
+                } else {
+                    /* The winner */
+                    tournament[i][k] = pin({
+                        "drawSideLane": false,
+                        "active": false,
+                        "isMatch": true,
+                        "drawFace": false
+                    });
+                }
+            }
+        }
+
+        /* Fill up the matches array */
+        for (var i = 0, len = tournament.length; i < len; i++) {
+            for (var k = 0, len2 = tournament[i].length; k < len2; k++) {
+                if (tournament[i][k].isMatch) {
+                    matches[matches.length] = tournament[i][k];
+                    matches[matches.length - 1].prevPins = [];
+                    // console.log("PrevPin[0]:", k * 2);
+                    // console.log("PrevPin[1]:", (k * 2) + 1);
+                    // console.log("");
+                    matches[matches.length - 1].prevPins[0] = tournament[i + 1] ? tournament[i + 1][k * 2] : "";
+                    matches[matches.length - 1].prevPins[1] = tournament[i + 1] ? tournament[i + 1][(k * 2) + 1] : "";
+                }
+            }
+        }
+        // matches.reverse();
+
+        /* Manually reversing the array for backward compatibility */
+        (function() {
+            var count = matches.length,
+                array = [];
+
+            // console.log("Matches Before Reverse:", matches.concat());
+            for (var i = 0; i < count; i++) {
+                array.push(matches.pop());
+            }
+
+            matches = array.concat();
+            // console.log("Matches:", matches.concat());
+            // console.log("Array:", matches.concat());
+        })();
+
+        // console.log(matches);
+        // console.log(tournament);
+
+        // tournament[3][0].isWinner = true;
+        // tournament[3][0].active = true;
+
+        // tournament[3][1].active = false;
+        // tournament[3][1].hasPlayed = true;
+
+        // tournament[2][0].turnOnDownLane = true;
+        // tournament[2][0].active = true;
+    }
+
+    function processStage(context, stage, sX, sY) {
+        var i = 0,
+            length = stage.length,
+            distance = (context.canvas.width / length),
+            halfWidth = (distance / 2),
+            halfHeight = ((context.canvas.height * 0.25) * 0.5),
+            lightColor = '#7fa5dd',
+            darkColor = '#082f67';
+
+        context.fillStyle = lightColor;
+        context.strokeStyle = lightColor;
+
+        for (; i < length; i++) {
+            var x = sX + (distance * i) + halfWidth,
+                y = sY + halfHeight;
+
+            /* Draw down lane */
+            if (stage[i].drawDownLane) {
+                if (!stage[i].turnOnDownLane) {
+                    context.strokeStyle = darkColor;
+                } else {
+                    context.strokeStyle = lightColor;
+                }
+                context.beginPath();
+                context.moveTo(x, y);
+                context.lineTo(x, y + halfHeight);
+                context.stroke();
+                context.closePath();
+            }
+
+            /* Draw side lane */
+            if (stage[i].drawSideLane) {
+                if (!stage[i].isWinner) {
+                    context.strokeStyle = darkColor;
+                } else {
+                    context.strokeStyle = lightColor;
+                }
+                context.beginPath();
+                if (i % 2) {
+                    /* Odd, draw to the left */
+                    context.moveTo(x, y);
+                    context.lineTo(x, y - halfHeight);
+                    context.moveTo(x, y - halfHeight);
+                    context.lineTo(x - halfWidth, y - halfHeight);
+                } else {
+                    /* Even, draw to the right */
+                    context.moveTo(x, y);
+                    context.lineTo(x, y - halfHeight);
+                    context.moveTo(x, y - halfHeight);
+                    context.lineTo(x + halfWidth, y - halfHeight);
+                }
+                context.stroke();
+                context.closePath();
+            }
+
+            /* Pick color for pin depending on whether the player has played, won, or lost */
+            if (stage[i].active) {
+
+                /* Used to test user colors */
+                // var color = colors[stage[i].p_id];
+                // console.log(colors);
+                // console.log(color);
+                // console.log(stage[i].p_id);
+                // context.fillStyle = color;
+
+                context.fillStyle = lightColor;
+            } else {
+                context.fillStyle = darkColor;
+            }
+
+            /* Draw box */
+            context.fillRect(x - (pinLength / 2), y - (pinLength / 2), pinLength, pinLength);
+
+            /* We are drawing the pin of a knocked out p_ */
+            if (!stage[i].isWinner && stage[i].hasPlayed) {
+                stage[i].p_id !== '' ? context.drawImage(playerImages[stage[i].p_id].greyscale, x - Math.round(pinLength * 0.5), y - Math.round(pinLength * 0.5)) : '';
+                context.strokeStyle = darkColor;
+                context.lineWidth = 2;
+                context.strokeRect(x - (pinLength / 2), y - (pinLength / 2), pinLength, pinLength);
+                context.lineWidth = 4;
+                context.strokeStyle = 'rgba(255, 0, 0, 0.43)';
+
+                // context.beginPath();
+                // context.moveTo(x - Math.round(pinLength * 0.5) + 7, y - Math.round(pinLength * 0.5) + 7);
+                // context.lineTo(x + Math.round(pinLength * 0.5) - 7, y + Math.round(pinLength * 0.5) - 7);
+
+                // context.moveTo(x + Math.round(pinLength * 0.5) - 7, y - Math.round(pinLength * 0.5) + 7);
+                // context.lineTo(x - Math.round(pinLength * 0.5) + 7, y + Math.round(pinLength * 0.5) - 7);
+
+                // // context.moveTo(x, y);
+                // // context.lineTo(x, y);
+
+                // context.stroke();
+                // context.closePath();
+
+                // document.body.appendChild(playerImages[stage[i].p_id].greyscale);
+            } else {
+                context.lineWidth = 2;
+                stage[i].p_id !== '' ? context.drawImage(playerImages[stage[i].p_id].normal, x - Math.round(pinLength * 0.5), y - Math.round(pinLength * 0.5)) : '';
+                context.strokeStyle = lightColor;
+                context.strokeRect(x - (pinLength / 2), y - (pinLength / 2), pinLength, pinLength);
+            }
+
+            /* Do this so that the other line draws are not affected */
+            context.lineWidth = 1;
+        }
+
+    }
+
+    function playMatch() {
+        currentMatch = matches.shift();
+
+        currentMatch.active = true;
+        currentMatch.turnOnDownLane = true;
+
+        currentMatch.prevPins[0].drawFace = true;
+        currentMatch.prevPins[1].drawFace = true;
+
+        hideTournamentComponents();
+        startMatch();
+    }
+
+    function finishMatch() {
+        if (player1winner) {
+            currentMatch.p_id = currentMatch.prevPins[0].p_id;
+
+            /* The winner */
+            currentMatch.prevPins[0].isWinner = true;
+            currentMatch.prevPins[0].active = true;
+            currentMatch.prevPins[0].hasPlayed = true;
+
+            /* The loser */
+            currentMatch.prevPins[1].active = false;
+            currentMatch.prevPins[1].hasPlayed = true;
+        } else {
+            currentMatch.p_id = currentMatch.prevPins[1].p_id;
+
+            /* The winner */
+            currentMatch.prevPins[1].isWinner = true;
+            currentMatch.prevPins[1].active = true;
+            currentMatch.prevPins[1].hasPlayed = true;
+
+            /* The loser */
+            currentMatch.prevPins[0].active = false;
+            currentMatch.prevPins[0].hasPlayed = true;
+        }
+        drawTable(t_context);
+        showTournamentBracket();
+    }
+
+    function hideTournamentComponents() {
+        t_canvas.hidden = true;
+        playersList.hidden = true;
+    }
+
+    function hideTournamentBracket() {
+        t_canvas.hidden = true;
+    }
+
+    function showTournamentBracket() {
+        t_canvas.hidden = false;
+    }
+
+    function showPlayersList() {
+        playersList.hidden = false;
+    }
+
+    function hiddenPlayersList() {
+        playersList.hidden = true;
+    }
+
+    function drawTable(context) {
+        clear(context);
+        for (var i = 0, len = tournament.length; i < len; i++) {
+            processStage(context, tournament[i], 0, context.canvas.height * (0.25 * i));
+        }
+    }
+
+    function updatePlayerPool() {
+        localStorage.setItem("players", JSON.stringify(players));
+    }
+
+
+    function processPlayerInfo() {
+        // if (player[0]) {
+        function getCanvasImage(index, type, /* playerCanvas, */ dataURL, x, y, _width, _height) {
+            var canvas = need.canvas(),
+                context = canvas.getContext('2d'),
+                img = new Image();
+
+            canvas.width = _width;
+            canvas.height = _height;
+
+            var canvas2 = need.canvas({
+                    "width": pinLength,
+                    "height": pinLength
+                }),
+                context2 = canvas2.getContext('2d');
+            img.onload = function() {
+                img.width = pinLength;
+                img.height = pinLength;
+                context.drawImage(img, x, y, _width, _height, 0, 0, pinLength, pinLength);
+
+                context2.drawImage(canvas, 0, 0, _width, _height /*  */ );
+                canvas2.style.border = "1px solid white";
+                // canvas = canvas2;
+                // playerImages[index][type] = canvas2;
+                // document.body.appendChild(playerCanvas);
+            };
+            img.src = dataURL;
+            // canvas.width = pinLength;
+            // canvas.height = pinLength;
+            return canvas2;
+        }
+
+        var count = 0;
+        availablePlayers.innerHTML = "<h3>Available Players</h3>";
+        for (var i in players) {
+            if (players[i]) {
+                playerImages[i] = {
+                    "normal": need.canvas(),
+                    "greyscale": need.canvas()
+                };
+
+                // playerImages[i].normal.src = players[i].normal;
+                // playerImages[i].greyscale.src = players[i].greyscale;
+
+                playerImages[i].normal = getCanvasImage(i, 'normal', players[i].images.normal.string, 0, 0, players[i].images.normal.pinLength, players[i].images.normal.pinLength);
+                playerImages[i].greyscale = getCanvasImage(i, 'normal', players[i].images.greyscale.string, 0, 0, players[i].images.greyscale.pinLength, players[i].images.greyscale.pinLength);
+
+                // console.log(playerImages[i])
+                // document.body.appendChild(playerImages[i].greyscale);
+
+                /* Add the player's info into the available players list */
+                var playerDiv = need.element("p", {
+                    "class": "playerCard"
+                });
+
+                playerDiv.innerText = count + 1 + ". Name: " + players[i].name + " | ID: " + players[i].id;
+                availablePlayers.appendChild(playerDiv);
+                count++;
+            }
+        }
+        playerIDs = count;
+        // }
+    }
+
+    function shuffleContenders() {
+        // for (var i = 0, len = contenders.length, total = 8; i < total; i++) {
+        //     contenders[i] = i;
+        // }
+
+        for (var i = 0, len = contenders.length; i < len; i++) {
+            var item = contenders.splice(need.math.randomInt(0, contenders.length - 1), 1)[0];
+            // item = item[0];
+            shuffledContenders[i] = item;
+        }
+        contenders = shuffledContenders.concat();
+        // console.log(contenders);
+    }
+
+    function renderContenderList() {
+        // if (contenders.length) {
+        contendersList.innerHTML = "<h3>Contenders (<span id=contenderCount>0</span>/8)</h3>";
+        for (var i = 0, len = contenders.length; i < len; i++) {
+            var contender = need.element('p'),
+                player = players[contenders[[i]]];
+
+            contenderCount.innerText - 0 < 8 ? (contenderCount.innerText = (contenderCount.innerText - 0) + 1) : '';
+            contender.innerText = i + 1 + ". Name: " + player.name + " | ID: " + player.id;
+            i < 8 ? (contender.style.color = "#7fa5dd") : (contender.style.color = "red");
+            contendersList.appendChild(contender);
+        }
+        // } else {
+        // contendersList.innerHTML = "<h3>Contenders (<span id=contenderCount>0</span>/8)</h3>";
+        // }
+    }
+
+    function removeContenderFromList() {
+        var id = prompt("Player to be removed as contender");
+        id ? (id -= 0) : (id = '');
+        for (var i = 0, len = contenders.length; i < len; i++) {
+            if (contenders[i] === id) {
+                console.log(contenders);
+                contenders.splice(i, 1);
+                console.log(contenders);
+                contenderCount.innerText - 0 !== 0 ? (contenderCount.innerText = (contenderCount.innerText - 0) - 1) : '';
+                renderContenderList();
+            }
+        }
+    }
+
+    function addContenderToList() {
+        var id = prompt("Player to be added as contender"),
+            failed = false;
+        id ? (id -= 0) : (id = '');
+        for (var i = 0, len = contenders.length; i < len; i++) {
+            if (contenders[i] === id) {
+                failed = true;
+            }
+        }
+        if (players[id] && !failed) {
+            contenders.push(id);
+            // contendersList.innerHTML = "<h3>Contenders (<span id=contenderCount>0</span>/8)</h3>";
+            contenderCount.innerText - 0 < 8 ? (contenderCount.innerText = (contenderCount.innerText - 0) + 1) : '';
+            renderContenderList();
+        } else {
+            if (!players[id]) {
+                alert("You put an ID that doesn't exist.");
+            } else {
+                alert("The player's already a contender.");
+            }
+        }
+    }
+
+    function player(options) {
+        var obj = {
+            "id": 0,
+            "name": '',
+            "images": {
+                "normal": {
+                    "string": '',
+                    "pinLength": 0
+                },
+                "grayscale": {
+                    "string": '',
+                    "pinLength": 0
+                }
+            }
+        };
+
+        if (options) {
+            for (var i in options) {
+                obj[i] = options[i];
+            }
+        }
+
+        return obj;
+    }
+
+    function pin(options) {
+        var obj = {
+            "isWinner": false,
+            "p_id": '',
+            "turnOnDownLane": false,
+            "turnOnSideLane": false,
+            "active": true,
+            "drawDownLane": true,
+            "drawSideLane": true,
+            "hasPlayed": false,
+            "drawFace": false
+                // "nextPin": {},
+                // "prevPins": []
+        };
+
+        if (options) {
+            for (var i in options) {
+                obj[i] = options[i];
+            }
+        }
+
+        return obj;
+    }
+
+    function startTournamentBracket() {
+        hideTournamentComponents();
+
+        /* For testing */
+        // var i = 0,
+        //     len = matches.length;
+        // var interval = setInterval(function() {
+        //     // console.log("Match in progress");
+        //     if (i == len) {
+        //         clearInterval(interval);
+        //     } else {
+        //         i++;
+        //         playMatch();
+        //     }
+        // }, 1420);
+        // showPlayerReadyScene();
+        showTournamentBracket();
+    }
+
+    function showPlayerReadyScene() {
+        readying.hidden = false;
+    }
+
+    function checkPlayerReadiness() {
+        readyCount++;
+        if (readyCount > 1) {
+            readyCount = 0;
+            playMatch();
+        }
+    }
+
+    function startMatch() {
+        matchHasStarted = true;
+        hideTournamentComponents();
+        drawMidLine();
+        start();
+        pause();
+        resetGame();
+        resume();
+    }
+
+    function createPlayer() {
+        var name = prompt("New player's name"),
+            normalDataUrl = '',
+            greyscaleDataUrl = '',
+            canvas = need.canvas({
+                "width": pinLength,
+                "height": pinLength
+            }),
+            context = canvas.getContext('2d'),
+            constraints = { video: true, audio: false };
+
+        preview.hidden = false;
+        playersList.hidden = true;
+
+        takePhoto.onclick = function() {
+            context.drawImage(picPreview, 0, 0, pinLength, pinLength);
+            // document.body.appendChild(canvas);
+            normalDataUrl = canvas.toDataURL();
+            greyscaleDataUrl = (function() {
+                var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+                var data = imageData.data;
+
+                for (var i = 0; i < data.length; i += 4) {
+                    var brightness = 0.34 * data[i] + 0.5 * data[i + 1] + 0.16 * data[i + 2];
+                    // red
+                    data[i] = brightness;
+                    // green
+                    data[i + 1] = brightness;
+                    // blue
+                    data[i + 2] = brightness;
+                    // alpha
+                    data[i + 3] = 255 * 0.25;
+                }
+
+                imageData.data = data;
+                context.putImageData(imageData, 0, 0);
+                return canvas.toDataURL();
+            })();
+
+            players[playerIDs++] = player({
+                id: playerIDs - 1,
+                name: name,
+                images: {
+                    normal: {
+                        "string": normalDataUrl,
+                        "pinLength": pinLength
+                    },
+                    greyscale: {
+                        "string": greyscaleDataUrl,
+                        "pinLength": pinLength
+                    }
+                }
+            });
+
+            updatePlayerPool();
+            processPlayerInfo();
+            preview.hidden = true;
+            playersList.hidden = false;
+        };
+
+        var promisifiedOldGUM = function(constraints) {
+
+            // First get ahold of getUserMedia, if present
+            var getUserMedia = (navigator.getUserMedia ||
+                navigator.webkitGetUserMedia ||
+                navigator.mozGetUserMedia);
+
+            // Some browsers just don't implement it - return a rejected promise with an error
+            // to keep a consistent interface
+            if (!getUserMedia) {
+                return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
+            }
+
+            // Otherwise, wrap the call to the old navigator.getUserMedia with a Promise
+            return new Promise(function(resolve, reject) {
+                getUserMedia.call(navigator, constraints, resolve, reject);
+            });
+
+        }
+
+        // Older browsers might not implement mediaDevices at all, so we set an empty object first
+        if (navigator.mediaDevices === undefined) {
+            navigator.mediaDevices = {};
+        }
+
+        // Some browsers partially implement mediaDevices. We can't just assign an object
+        // with getUserMedia as it would overwrite existing properties.
+        // Here, we will just add the getUserMedia property if it's missing.
+        if (navigator.mediaDevices.getUserMedia === undefined) {
+            navigator.mediaDevices.getUserMedia = promisifiedOldGUM;
+        }
+
+        navigator.mediaDevices.getUserMedia(constraints)
+            .then(function(stream) {
+                picPreview.src = window.URL.createObjectURL(stream);
+                picPreview.play();
+                canvas.width = picPreview.clientWidth;
+                canvas.height = picPreview.clientHeight;
+            })
+            .catch(function(err) {
+                console.log(err.name + ": " + err.message);
+            });
+        // The Polyfill above was extracted from https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia
+    }
+
+    function addFirst8() {
+        // if (players[0]) {
+        for (var i = 0; i < playerIDs; i++) {
+            contenders[i] = players[i].id;
+        }
+        renderContenderList();
+        // }
+    }
+
+    function init2() {
+        gameContainer.appendChild(t_canvas);
+        t_canvas.width = t_canvas.clientWidth;
+        t_canvas.height = t_canvas.clientHeight;
+        /* Now we set the starting x, y, width, heights of the tournament tree pins */
+        pinLength = Math.round(gameContainer.clientWidth / 8) - ((gameContainer.clientWidth / 8) * 0.34);
+        t_canvas.hidden = true;
+        playersList.hidden = false;
+
+        processPlayerInfo();
+
+        /* Used for testing */
+        addFirst8();
+
+        addContenderBtn.onclick = function() {
+            addContenderToList();
+        };
+
+        removeContenderBtn.onclick = function() {
+            removeContenderFromList();
+        };
+
+        createPlayerBtn.onclick = function() {
+            createPlayer();
+        };
+
+        startTournamentBtn.onclick = function() {
+            if (contenders.length > 7) {
+                prepTournament();
+                drawTable(t_context);
+                shuffleContenders();
+                startTournamentBracket();
+            }
+        };
+    }
+
     function init() {
-        /* TODO: Change the code so that init opens the home screen and not the game */
         /* This is the display canvas */
         _canvas = need.canvas({
-            "id": "display"
+            "id": "display",
+            "hidden": true
         });
         _context = _canvas.getContext('2d');
         /* This is the offscreen canvas */
@@ -667,12 +1351,14 @@ window.onload = function() {
         context = canvas.getContext('2d');
         /* This is the background canvas, it is drawn on once and never touched again */
         bgCanvas = need.canvas({
-            "id": "background"
+            "id": "background",
+            "hidden": true
         });
         bgContext = bgCanvas.getContext('2d');
 
-        resize();
-        window.addEventListener('resize', resize);
+        /* For now remove resize */
+        // resize();
+        // window.addEventListener('resize', resize);
 
         /* Add the canvas to the game */
         gameContainer.appendChild(_canvas);
@@ -687,8 +1373,6 @@ window.onload = function() {
         need.pixelate(_context);
         need.pixelate(context);
 
-        /* Draw the */
-        drawMidLine();
 
         /* Create the two players/paddles and the ball */
         var half = getCanvasHalves(),
@@ -858,17 +1542,25 @@ window.onload = function() {
         ball.setVelocity(ball.velocity.x, ball.velocity.y);
 
         /* Button event listeners */
-        document.getElementById('pause').onclick = function() {
-            showPauseMenu();
-        };
+        // document.getElementById('pause').onclick = function() {
+        //     showPauseMenu();
+        // };
         document.querySelectorAll('.resume').forEach(function(_ele) {
             _ele.onclick = function() {
                 resume();
             };
         });
-        document.getElementById('mute').onclick = function() {
-            toggleSfxMute();
-        };
+        // document.getElementById('mute').onclick = function() {
+        //     toggleSfxMute();
+        // };
+        document.querySelectorAll('.reset').forEach(function(_ele) {
+            _ele.onclick = function() {
+                resetGame();
+                pause();
+                resume();
+            };
+        });
+
         document.querySelectorAll('.reset').forEach(function(_ele) {
             _ele.onclick = function() {
                 resetGame();
@@ -899,10 +1591,62 @@ window.onload = function() {
             return onKey(_eve, (_eve.keyCode) ? _eve.keyCode : _eve.charCode, true);
         }, false);
 
-        start();
-        pause();
-        resetGame();
-        resume();
+        /* Tournament Initialization */
+        gameContainer.appendChild(t_canvas);
+        t_canvas.width = t_canvas.clientWidth;
+        t_canvas.height = t_canvas.clientHeight;
+        /* Now we set the starting x, y, width, heights of the tournament tree pins */
+        pinLength = Math.round(gameContainer.clientWidth / 8) - ((gameContainer.clientWidth / 8) * 0.34);
+        t_canvas.hidden = true;
+        playersList.hidden = false;
+
+        processPlayerInfo();
+
+        /* Used for testing */
+        addFirst8();
+
+        addContenderBtn.onclick = function() {
+            addContenderToList();
+        };
+
+        removeContenderBtn.onclick = function() {
+            removeContenderFromList();
+        };
+
+        createPlayerBtn.onclick = function() {
+            createPlayer();
+        };
+
+        startTournamentBtn.onclick = function() {
+            if (contenders.length > 7) {
+                prepTournament();
+                drawTable(t_context);
+                shuffleContenders();
+                startTournamentBracket();
+                snd.stop();
+                snd.tournament.play();
+            }
+        };
+
+        t_canvas.onclick = function() {
+            hideTournamentComponents();
+            showPlayerReadyScene();
+        };
+
+        /* For testing, mute audio */
+        // toggleSfxMute();
+
+        /* Play Main Title Music */
+        snd.stop();
+        snd.title.play();
+
+        /* This starts the game */
+        /* Draw the */
+        // drawMidLine();
+        // start();
+        // pause();
+        // resetGame();
+        // resume();
     }
 
     /* =====================endFunctions=================== */
@@ -913,15 +1657,23 @@ window.onload = function() {
     loadImages([], function() {
         var aud = hasAudio();
 
-        if (aud) {
-            /* Audio format */
-            var format = aud.ogg ? '.ogg' : ".m4a";
+        /* Audio format */
+        var format = aud.ogg ? 'ogg' : "m4a";
 
-            loadSounds(["wall", "score", "paddle"], [
-                './../audio/sfx/ogg/plop' + format,
-                './../audio/sfx/ogg/peeeeeep' + format,
-                './../audio/sfx/ogg/beeep' + format
-            ], function() {
+        var names = ["wall", "score", "paddle", "title", "final", "tournament", "preFinal"],
+            links = [
+                './../audio/sfx/' + format + '/plop' + '.' + format,
+                './../audio/sfx/' + format + '/peeeeeep' + '.' + format,
+                './../audio/sfx/' + format + '/beeep' + '.' + format,
+                './../audio/music/' + format + '/title' + '.' + format,
+                './../audio/music/' + format + '/final' + '.' + format,
+                './../audio/music/' + format + '/tournament_view' + '.' + format,
+                './../audio/music/' + format + '/preFinalMatches' + '.' + format
+            ];
+
+        if (aud) {
+
+            loadSounds(names, links, function() {
                 /* Setup the sound effects */
                 var sfxVolume = 0.34;
                 configSfx(snd.wall, {
@@ -937,18 +1689,32 @@ window.onload = function() {
                     "volume": sfxVolume
                 });
 
+                configSfx(snd.title, {
+                    "loop": true
+                });
+                configSfx(snd.final, {
+                    "loop": true
+                });
+                configSfx(snd.tournament, {
+                    "loop": true
+                });
+                configSfx(snd.preFinal, {
+                    "loop": true
+                });
+
                 /* Initialize game */
                 init();
             });
         } else {
             var obj = {
-                "play": function() {}
+                "play": function() {},
+                "stop": function() {}
             };
 
             /* Make the empty sfx objects so that the game doesn't break on us when we try playing audio when it isn't supported */
-            snd.wall = obj;
-            snd.score = obj;
-            snd.paddle = obj;
+            for (var i = 0, length = names.length; i < length; i++) {
+                snd[names[i]] = obj;
+            }
 
             init();
         }
