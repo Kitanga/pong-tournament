@@ -24,7 +24,7 @@ window.onload = function() {
         score = {
             "p1": 0,
             "p2": 0,
-            "winScore": 10,
+            "winScore": 1,
             "p1_color": "",
             "p2_color": "",
             "counter": {},
@@ -46,10 +46,8 @@ window.onload = function() {
                 !firstRun ? snd.score.play() : '';
                 if (this.p1 == this.winScore) {
                     // showWinMessage("Player 1 Wins!!");
-                    // this.reset();
-                    stop();
-                    player1winner = true;
-                    finishMatch();
+                    this.reset();
+                    finishMatch(true);
                 }
             },
             "renderP2": function() {
@@ -57,11 +55,17 @@ window.onload = function() {
                 !firstRun ? snd.score.play() : '';
                 if (this.p2 == this.winScore) {
                     // showWinMessage("Player 2 Wins!!");
-                    // this.reset();
-                    stop();
-                    player1winner = false;
+                    this.reset();
                     finishMatch();
                 }
+            },
+            "hide": function() {
+                this.p1_counter.hidden = true;
+                this.p2_counter.hidden = true;
+            },
+            "show": function() {
+                this.p1_counter.hidden = false;
+                this.p2_counter.hidden = false;
             }
         },
         winMessage = document.getElementById('win-message'),
@@ -83,7 +87,7 @@ window.onload = function() {
         snd = {
             "stop": function() {
                 for (var i in this) {
-                    console.log(this[i]);
+                    // console.log(this[i]);
                     if (this[i].pause) {
                         this[i].pause();
                         this[i].currentTime = 0;
@@ -168,15 +172,14 @@ window.onload = function() {
             "Y": 89,
             "Z": 90,
             "TILDA": 192
-        },
-        /* Adds fps meter */
+        }/* ,
         fpsmeter = new FPSMeter({
             decimals: 0,
             graph: true,
             theme: 'transparent',
             heat: 1,
             left: '90%'
-        });
+        }) */;
 
     /* ======================endGlobals======================= */
 
@@ -359,7 +362,7 @@ window.onload = function() {
     /* Setup the game loop function */
 
     function frame() {
-        fpsmeter.tickStart();
+        // fpsmeter.tickStart();
 
         /*  Now the true stuff begins */
         now = window.performance.now();
@@ -373,7 +376,7 @@ window.onload = function() {
         // }
         last = now;
         raf = requestAnimationFrame(frame);
-        fpsmeter.tick();
+        // fpsmeter.tick();
     }
 
     function drawSprite(context, sprite) {
@@ -423,7 +426,8 @@ window.onload = function() {
     function resize() {
         var w = window.innerWidth,
             h = window.innerHeight;
-        width = Math.round(window.innerHeight + (window.innerHeight * 0.5));
+        // width = Math.round(window.innerHeight + (window.innerHeight * 0.5));
+        width = window.width * 0.52;
         height = Math.round(window.innerHeight);
 
         // console.log("running resize");
@@ -443,7 +447,9 @@ window.onload = function() {
             for (var i = 0; i < totalSprites; i++) {
                 stage[i].resize();
             }
-            drawMidLine();
+            if (matchHasStarted) {
+                drawMidLine();
+            }
         }
         /* Portrait orientation */
         else if (h > w) {
@@ -485,7 +491,7 @@ window.onload = function() {
             /* Now we create the score counter and place it in it's place */
             score.counter = need.element('div', {
                 "id": "score",
-                "style": 'width:' + score_counter.width + 'px;' + 'height:' + score_counter.height + 'px;' + "left:" + round((width * 0.5) - (score_counter.width * 0.5)) + 'px;' + "font-size:" + (scoreCardWidth * 0.5) + 'px;'
+                "style": 'width:' + score_counter.width + 'px;' + 'height:' + score_counter.height + 'px;' + "left:" + round((width * 0.5) + 14) + 'px;' + "font-size:" + (scoreCardWidth * 0.5) + 'px;'
             });
 
             // score.p1_counter.innerHTML = "0";
@@ -509,7 +515,7 @@ window.onload = function() {
             score.renderP1();
             score.renderP2();
             firstRun = false;
-            gameContainer.appendChild(bgCanvas);
+            // gameContainer.appendChild(bgCanvas);
         }
 
     }
@@ -543,11 +549,42 @@ window.onload = function() {
             if (getKey("p") === code) {
                 showPauseMenu();
             }
+        }
 
-            if (getKey("m") === code) {
-                toggleSfxMute();
+        if (getKey("m") === code && _eve.type == "keyup") {
+            toggleSfxMute();
+        }
+
+        if (getKey("return") == code && _eve.type == "keyup") {
+            if (!playersList.hidden) {
+                if (contenders.length > 7) {
+                    prepTournament();
+                    drawTable(t_context);
+                    shuffleContenders();
+                    startTournamentBracket();
+                    snd.stop();
+                    snd.tournament.play();
+                }
+            }
+            /* Otherwise if we are on the tournament bracket view */
+            else if (!t_canvas.hidden) {
+                hideTournamentComponents();
+                showPlayerReadyScene();
+            }
+            /* If we are on the readying screen */
+            else if (!readying.hidden) {
+                hidePlayerReadyScene();
+                playMatch();
+            }
+            /* And if we are on the winner screen */
+            else if (!champion.hidden) {
+                hideChampionPage();
+                snd.stop();
+                snd.title.play();
+                showPlayersList();
             }
         }
+        // console.log(_eve);
 
         /* Start by looping through the gameObjects on the stage */
         for (var i = 0; i < totalSprites; i++) {
@@ -717,8 +754,9 @@ window.onload = function() {
                     /* The first stage (aka quarter-finals) */
                     tournament[i][k] = pin({
                         "drawDownLane": false,
-                        "p_id": players[contenders[k]] ? players[contenders[k]].id : 1,
-                        "drawFace": true
+                        "p_id": players[contenders[k]].id,
+                        "drawFace": true,
+                        "drawName": players[contenders[k]].name
                     });
                 } else if (i) {
                     /* The normal stages */
@@ -882,8 +920,16 @@ window.onload = function() {
             } else {
                 context.lineWidth = 2;
                 stage[i].p_id !== '' ? context.drawImage(playerImages[stage[i].p_id].normal, x - Math.round(pinLength * 0.5), y - Math.round(pinLength * 0.5)) : '';
+                // console.log(playerImages[stage[i].p_id])
                 context.strokeStyle = lightColor;
                 context.strokeRect(x - (pinLength / 2), y - (pinLength / 2), pinLength, pinLength);
+            }
+
+            /* Drawing of names */
+            if (stage[i].drawName) {
+                context.strokeStyle = lightColor;
+                context.font = 'oblique small-caps 100 14px sans-serif';
+                context.strokeText(stage[i].drawName.slice(0, 7), x - (pinLength / 2), y + (halfHeight * 0.5) + (context.lineWidth * 2));
             }
 
             /* Do this so that the other line draws are not affected */
@@ -905,7 +951,35 @@ window.onload = function() {
         startMatch();
     }
 
-    function finishMatch() {
+    function startMatch() {
+        matchHasStarted = true;
+        hideTournamentComponents();
+        snd.stop();
+        if (matches.length) {
+            snd.preFinal.play();
+        } else {
+            snd.final.play();
+        }
+        gameContainer.style.width = Math.round(window.innerHeight + (window.innerHeight * 0.5)) + 'px';
+        gameContainer.style.height = Math.round(window.innerHeight) + 'px';
+        _canvas.style.width = gameContainer.style.width;
+        _canvas.style.height = gameContainer.style.height;
+        canvas.style.width = gameContainer.style.width;
+        canvas.style.height = gameContainer.style.height;
+        bgCanvas.style.width = gameContainer.style.width;
+        bgCanvas.style.height = gameContainer.style.height;
+        showGame();
+        drawMidLine();
+        start();
+        pause();
+        resetGame();
+        resume();
+    }
+    
+    function finishMatch(player1winner) {
+        stop();
+        hideGame();
+        gameContainer.style.width = "52%";
         if (player1winner) {
             currentMatch.p_id = currentMatch.prevPins[0].p_id;
 
@@ -930,7 +1004,17 @@ window.onload = function() {
             currentMatch.prevPins[0].hasPlayed = true;
         }
         drawTable(t_context);
-        showTournamentBracket();
+        if (matches.length) {
+            snd.stop();
+            snd.tournament.play();
+            showTournamentBracket();
+        } else {
+            hideTournamentComponents();
+            addFirst8();
+            // showPlayersList();
+            winnerName.innerText = players[currentMatch.p_id].name.toUpperCase();
+            showChampionPage();
+        }
     }
 
     function hideTournamentComponents() {
@@ -952,6 +1036,29 @@ window.onload = function() {
 
     function hiddenPlayersList() {
         playersList.hidden = true;
+    }
+
+    function showChampionPage() {
+        champion.hidden = false;
+    }
+
+    function hiddenChampionPage() {
+        champion.hidden = true;
+    }
+
+    function showGame() {
+        _canvas.hidden = false;
+        bgCanvas.hidden = false;
+        score.show();
+        // canvas.width = gameContainer.clientWidth;
+        // canvas.height = gameContainer.clientHeight;
+        // console.log(canvas.width, canvas.height);
+    }
+
+    function hideGame() {
+        _canvas.hidden = true;
+        bgCanvas.hidden = true;
+        score.hide();
     }
 
     function drawTable(context) {
@@ -1041,7 +1148,8 @@ window.onload = function() {
             shuffledContenders[i] = item;
         }
         contenders = shuffledContenders.concat();
-        // console.log(contenders);
+        console.log(contenders);
+        console.log(shuffledContenders);
     }
 
     function renderContenderList() {
@@ -1133,9 +1241,9 @@ window.onload = function() {
             "drawDownLane": true,
             "drawSideLane": true,
             "hasPlayed": false,
-            "drawFace": false
-                // "nextPin": {},
-                // "prevPins": []
+            "drawFace": false,
+            // "nextPin": {},
+            "prevPins": []
         };
 
         if (options) {
@@ -1149,25 +1257,15 @@ window.onload = function() {
 
     function startTournamentBracket() {
         hideTournamentComponents();
-
-        /* For testing */
-        // var i = 0,
-        //     len = matches.length;
-        // var interval = setInterval(function() {
-        //     // console.log("Match in progress");
-        //     if (i == len) {
-        //         clearInterval(interval);
-        //     } else {
-        //         i++;
-        //         playMatch();
-        //     }
-        // }, 1420);
-        // showPlayerReadyScene();
         showTournamentBracket();
     }
 
     function showPlayerReadyScene() {
         readying.hidden = false;
+    }
+
+    function hidePlayerReadyScene() {
+        readying.hidden = true;
     }
 
     function checkPlayerReadiness() {
@@ -1176,16 +1274,6 @@ window.onload = function() {
             readyCount = 0;
             playMatch();
         }
-    }
-
-    function startMatch() {
-        matchHasStarted = true;
-        hideTournamentComponents();
-        drawMidLine();
-        start();
-        pause();
-        resetGame();
-        resume();
     }
 
     function createPlayer() {
@@ -1295,12 +1383,17 @@ window.onload = function() {
     }
 
     function addFirst8() {
-        // if (players[0]) {
-        for (var i = 0; i < playerIDs; i++) {
-            contenders[i] = players[i].id;
+        if (shuffledContenders.length) {
+            contenders = shuffledContenders.concat();
+            renderContenderList();
         }
-        renderContenderList();
-        // }
+        /* Otherwise if we haven't filled the shiffeldContenders array we add the first 8 players */
+        else if (playerIDs) {
+            for (var i = 0, length = playerIDs > 8 ? 8 : playerIDs; i < length; i++) {
+                contenders[i] = players[i].id;
+            }
+            renderContenderList();
+        }
     }
 
     function init2() {
@@ -1339,29 +1432,47 @@ window.onload = function() {
         };
     }
 
+    function setDimensions() {
+        width = gameContainer.clientWidth;
+        height = gameContainer.clientHeight;
+    }
+
+
     function init() {
         /* This is the display canvas */
         _canvas = need.canvas({
             "id": "display",
-            "hidden": true
+            "hidden": true,
+            "width": gameContainer.clientWidth + "px",
+            "height": gameContainer.clientHeight + "px"
         });
         _context = _canvas.getContext('2d');
+        /* Add the canvas to the game */
+        gameContainer.appendChild(_canvas);
         /* This is the offscreen canvas */
-        canvas = need.canvas();
+        canvas = need.canvas({
+            "width": gameContainer.clientWidth + "px",
+            "height": gameContainer.clientHeight + "px"
+        });
+        // console.log(canvas.width, canvas.height)
         context = canvas.getContext('2d');
         /* This is the background canvas, it is drawn on once and never touched again */
         bgCanvas = need.canvas({
             "id": "background",
-            "hidden": true
+            "hidden": true,
+            "width": gameContainer.clientWidth + "px",
+            "height": gameContainer.clientHeight + "px"
         });
         bgContext = bgCanvas.getContext('2d');
 
+        gameContainer.appendChild(bgCanvas);
+
         /* For now remove resize */
         // resize();
-        // window.addEventListener('resize', resize);
+        setDimensions();
+        window.addEventListener('resize', setDimensions);
 
-        /* Add the canvas to the game */
-        gameContainer.appendChild(_canvas);
+
 
         /* Now render the score */
         // score.renderP1();
@@ -1378,14 +1489,15 @@ window.onload = function() {
         var half = getCanvasHalves(),
             paddle = getPaddleInfo(),
             padding = 25,
+            p_velocity = 520,
             ballDim = getBallInfo();
 
         window.p_1 = addSprite(0 + padding, half.height - (paddle.height * 0.5), paddle.width, paddle.height, score.p1_color);
-        p_1.setVelocity(340);
+        p_1.setVelocity(p_velocity);
         window.p_2 = addSprite(width - (paddle.width + padding), half.height - (paddle.height * 0.5), paddle.width, paddle.height, score.p2_color);
-        p_2.setVelocity(340);
+        p_2.setVelocity(p_velocity);
         window.ball = addSprite(round(half.width - (ballDim.width * 0.5)), round(half.height - (ballDim.height * 0.5)), ballDim.width, ballDim.height);
-        ball.speed = 270;
+        ball.speed = 250;
         ball.baseSpeed = ball.speed;
         ball.accelleration = 1700;
         ball.stateChanged = true;
@@ -1404,6 +1516,12 @@ window.onload = function() {
                 // vy = 250;
                 this.pos.y += Math.round(vy * dt);
                 this.stateChanged = true;
+            }
+
+            if (y < 0) {
+                this.pos.y = 0;
+            } else if (y > height - this.height) {
+                this.pos.y = height - this.height;
             }
         };
 
@@ -1466,12 +1584,14 @@ window.onload = function() {
                 /* Collision test with right paddle */
                 if (x > width - collisionPadding && collisionCheck(p_2, this)) {
                     snd.paddle.play();
-                    if (speed < 2500) {
+                    if (speed < 1700) {
                         this.accellerate(dt);
                     } else {
-                        this.speed = 2500;
+                        this.speed = 1700;
                     }
-                    this.velocity.x = -(this.speed);
+                    speed = this.speed;
+                    this.velocity.x = -(speed);
+                    this.velocity.y = speed * need.math.randomInt(-1.7, 1.7);
                 }
                 /* Collision test with right wall */
                 else if (x > width) {
@@ -1491,15 +1611,14 @@ window.onload = function() {
                 /* Collision test with left paddle */
                 if (x < collisionPadding && collisionCheck(p_1, this)) {
                     snd.paddle.play();
-                    if (speed < 2500) {
+                    if (speed < 1700) {
                         this.accellerate(dt);
                     } else {
-                        this.speed = 2500;
+                        this.speed = 1700;
                     }
-                    // this.speed += this.accelleration * dt;
-                    // p_2.velocity.y += this.accelleration * dt;
-                    // p_1.velocity.y += this.accelleration * dt;
-                    this.velocity.x = this.speed;
+                    speed = this.speed;
+                    this.velocity.x = speed;
+                    this.velocity.y = speed * need.math.randomInt(-1.7, 1.7);
 
                 }
                 /* Collision test with left wall */
@@ -1520,7 +1639,8 @@ window.onload = function() {
             if (vy < 0) {
                 /* Check with the top wall */
                 if (y < 0) {
-                    this.velocity.y = this.speed;
+                    this.pos.y = 0;
+                    this.velocity.y = (speed);
                     snd.wall.play();
                 }
             }
@@ -1528,7 +1648,8 @@ window.onload = function() {
             else if (vy > 0) {
                 /* Check with the bottom wall */
                 if (y > height - this.height) {
-                    this.velocity.y = -this.speed;
+                    this.pos.y = height - this.height;
+                    this.velocity.y = -(speed);
                     snd.wall.play();
                 }
             }
@@ -1628,17 +1749,24 @@ window.onload = function() {
             }
         };
 
-        t_canvas.onclick = function() {
-            hideTournamentComponents();
-            showPlayerReadyScene();
-        };
+        // t_canvas.onclick = function() {
+        //     hideTournamentComponents();
+        //     showPlayerReadyScene();
+        // };
 
-        /* For testing, mute audio */
-        // toggleSfxMute();
+        // ready.onclick = function() {
+        //     // debugger;
+        //     hidePlayerReadyScene();
+        //     playMatch();
+        // };
+
 
         /* Play Main Title Music */
         snd.stop();
         snd.title.play();
+
+        /* For testing, mute audio */
+        // toggleSfxMute();
 
         /* This starts the game */
         /* Draw the */

@@ -3,6 +3,10 @@
     src: url("Aldrich-Regular.ttf");
 }
 
+/* * { */
+    /* box-sizing: border-box; */
+/* } */
+
 body,
 html,
 
@@ -41,8 +45,8 @@ body {
 #background {
     /* background-color: #1b2838; */
     /* background-color: #2d4c71; */
-    background-color: black;
-    z-index: -100;
+    /* background-color: black !important; */
+    z-index: -10;
 }
 
 #game {
@@ -193,8 +197,10 @@ body {
 
 
 #playersList {
+    box-sizing: border-box;
     color: #7fa5dd;
     padding: 7%;
+    padding-right: 0;
     width: 92%;
     height: 92%;
     font-family: 'Aldrich', sans-serif;
@@ -250,4 +256,50 @@ body {
     width: 17%;
     margin-left: auto;
     margin-right: auto;
+}
+
+#ready {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+#ready div {
+    padding-top: 34%;
+    /* position: relative; */
+    /* left: calc(25% - 0); */
+    color: #7fa5dd;
+    width: 70%;
+    margin: 0 auto;
+    text-align: center;
+    font-size: 140px;
+    font-weight: bolder;
+    font-family: 'Aldrich', sans-serif;
+}
+
+#champion {
+    /* z-index: 10000; */
+    /* position: absolute; */
+    /* background-color: #082f67; */
+    color: #7fa5dd;
+    width: 100%;
+    height: 100%;
+}
+
+#champion div {
+    padding-top: 25%;
+    /* position: relative; */
+    /* left: calc(25% - 0); */
+    color: #7fa5dd;
+    width: 92%;
+    margin: 0 auto;
+    text-align: center;
+    font-size: 124px;
+    font-weight: bolder;
+    font-family: 'Aldrich', sans-serif;
+}
+
+#champion div#winnerName {
+    padding-top: 0;
+    color: white;
 }
