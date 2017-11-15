@@ -172,14 +172,16 @@ window.onload = function() {
             "Y": 89,
             "Z": 90,
             "TILDA": 192
-        }/* ,
-        fpsmeter = new FPSMeter({
-            decimals: 0,
-            graph: true,
-            theme: 'transparent',
-            heat: 1,
-            left: '90%'
-        }) */;
+        }
+        /* ,
+                fpsmeter = new FPSMeter({
+                    decimals: 0,
+                    graph: true,
+                    theme: 'transparent',
+                    heat: 1,
+                    left: '90%'
+                }) */
+    ;
 
     /* ======================endGlobals======================= */
 
@@ -975,7 +977,7 @@ window.onload = function() {
         resetGame();
         resume();
     }
-    
+
     function finishMatch(player1winner) {
         stop();
         hideGame();
@@ -1783,23 +1785,27 @@ window.onload = function() {
 
     /* First load all images */
     loadImages([], function() {
-        var aud = hasAudio();
+        var aud = hasAudio(),
+            hasSound = false;
 
         /* Audio format */
         var format = aud.ogg ? 'ogg' : "m4a";
 
         var names = ["wall", "score", "paddle", "title", "final", "tournament", "preFinal"],
-            links = [
-                './../audio/sfx/' + format + '/plop' + '.' + format,
-                './../audio/sfx/' + format + '/peeeeeep' + '.' + format,
-                './../audio/sfx/' + format + '/beeep' + '.' + format,
-                './../audio/music/' + format + '/title' + '.' + format,
-                './../audio/music/' + format + '/final' + '.' + format,
-                './../audio/music/' + format + '/tournament_view' + '.' + format,
-                './../audio/music/' + format + '/preFinalMatches' + '.' + format
-            ];
+            links = []
+            /*
+                        links = [
+                            './../audio/sfx/' + format + '/plop' + '.' + format,
+                            './../audio/sfx/' + format + '/peeeeeep' + '.' + format,
+                            './../audio/sfx/' + format + '/beeep' + '.' + format,
+                            './../audio/music/' + format + '/title' + '.' + format,
+                            './../audio/music/' + format + '/final' + '.' + format,
+                            './../audio/music/' + format + '/tournament_view' + '.' + format,
+                            './../audio/music/' + format + '/preFinalMatches' + '.' + format
+                        ] */
+        ;
 
-        if (aud) {
+        if (aud && hasSound) {
 
             loadSounds(names, links, function() {
                 /* Setup the sound effects */
