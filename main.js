@@ -1148,8 +1148,8 @@ window.onload = function() {
             shuffledContenders[i] = item;
         }
         contenders = shuffledContenders.concat();
-        console.log(contenders);
-        console.log(shuffledContenders);
+        // console.log(contenders);
+        // console.log(shuffledContenders);
     }
 
     function renderContenderList() {
@@ -1174,9 +1174,9 @@ window.onload = function() {
         id ? (id -= 0) : (id = '');
         for (var i = 0, len = contenders.length; i < len; i++) {
             if (contenders[i] === id) {
-                console.log(contenders);
+                // console.log(contenders);
                 contenders.splice(i, 1);
-                console.log(contenders);
+                // console.log(contenders);
                 contenderCount.innerText - 0 !== 0 ? (contenderCount.innerText = (contenderCount.innerText - 0) - 1) : '';
                 renderContenderList();
             }
@@ -1288,7 +1288,7 @@ window.onload = function() {
             constraints = { video: true, audio: false };
 
         preview.hidden = false;
-        playersList.hidden = true;
+        showPlayersList();
 
         takePhoto.onclick = function() {
             context.drawImage(picPreview, 0, 0, pinLength, pinLength);
@@ -1334,7 +1334,7 @@ window.onload = function() {
             updatePlayerPool();
             processPlayerInfo();
             preview.hidden = true;
-            playersList.hidden = false;
+            showPlayersList();
         };
 
         var promisifiedOldGUM = function(constraints) {
