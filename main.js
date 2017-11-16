@@ -24,7 +24,7 @@ window.onload = function() {
         score = {
             "p1": 0,
             "p2": 0,
-            "winScore": 1,
+            "winScore": 10,
             "p1_color": "",
             "p2_color": "",
             "counter": {},
@@ -1036,7 +1036,7 @@ window.onload = function() {
         playersList.hidden = false;
     }
 
-    function hiddenPlayersList() {
+    function hidePlayersList() {
         playersList.hidden = true;
     }
 
@@ -1044,7 +1044,7 @@ window.onload = function() {
         champion.hidden = false;
     }
 
-    function hiddenChampionPage() {
+    function hideChampionPage() {
         champion.hidden = true;
     }
 
@@ -1278,6 +1278,10 @@ window.onload = function() {
         }
     }
 
+    function stopStream(stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+
     function createPlayer() {
         var name = prompt("New player's name"),
             normalDataUrl = '',
@@ -1287,10 +1291,11 @@ window.onload = function() {
                 "height": pinLength
             }),
             context = canvas.getContext('2d'),
+            picStream = {},
             constraints = { video: true, audio: false };
 
         preview.hidden = false;
-        showPlayersList();
+        hidePlayersList();
 
         takePhoto.onclick = function() {
             context.drawImage(picPreview, 0, 0, pinLength, pinLength);
@@ -1336,6 +1341,7 @@ window.onload = function() {
             updatePlayerPool();
             processPlayerInfo();
             preview.hidden = true;
+            stopStream(picStream);
             showPlayersList();
         };
 
@@ -1373,6 +1379,7 @@ window.onload = function() {
 
         navigator.mediaDevices.getUserMedia(constraints)
             .then(function(stream) {
+                picStream = stream;
                 picPreview.src = window.URL.createObjectURL(stream);
                 picPreview.play();
                 canvas.width = picPreview.clientWidth;
@@ -1396,42 +1403,6 @@ window.onload = function() {
             }
             renderContenderList();
         }
-    }
-
-    function init2() {
-        gameContainer.appendChild(t_canvas);
-        t_canvas.width = t_canvas.clientWidth;
-        t_canvas.height = t_canvas.clientHeight;
-        /* Now we set the starting x, y, width, heights of the tournament tree pins */
-        pinLength = Math.round(gameContainer.clientWidth / 8) - ((gameContainer.clientWidth / 8) * 0.34);
-        t_canvas.hidden = true;
-        playersList.hidden = false;
-
-        processPlayerInfo();
-
-        /* Used for testing */
-        addFirst8();
-
-        addContenderBtn.onclick = function() {
-            addContenderToList();
-        };
-
-        removeContenderBtn.onclick = function() {
-            removeContenderFromList();
-        };
-
-        createPlayerBtn.onclick = function() {
-            createPlayer();
-        };
-
-        startTournamentBtn.onclick = function() {
-            if (contenders.length > 7) {
-                prepTournament();
-                drawTable(t_context);
-                shuffleContenders();
-                startTournamentBracket();
-            }
-        };
     }
 
     function setDimensions() {
