@@ -4,7 +4,7 @@ Created this pong clone and added a tournament bracket to it.
 
 The original tournament code is here: [tournament-bracket](https://github.com/Kitanga/tournament-bracket)
 
-You can play this game here: [PLAY GAME](http://htmlpreview.github.io/?https://github.com/Kitanga/pong-tournament/blob/master/index.html)
+You can play this game here: [PLAY GAME](https://kitanga.github.io/pong-tournament/)
 
 ## Tournament Bracket
 
